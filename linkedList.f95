@@ -6,7 +6,7 @@
 module linked_list
     implicit none
 
-    ! Defines an single node for the linked list. This should not be used to represent an entire list
+    ! Defines a single node for the linked list. This should not be used to represent an entire list
     ! Contains a field to store the number, and a pointer to the next and previous nodes
     type list_node
         integer :: num
@@ -14,8 +14,7 @@ module linked_list
         type (list_node), pointer :: previous => null()
     end type list_node
 
-    ! a type def to represent a pointer to a list structure
-    ! This should only exist once per list, and contains the head and tail of the list
+    ! Defines a pointer to a list which contains the head and tail of the list. This should only exist once per list and not as a node
     ! Semantically speaking, the two are lists are technically identical in their fields, but they can be different based on implementation
     type list_pointer
         integer :: isNegative
@@ -37,7 +36,7 @@ module linked_list
 
         current => list%head
 
-        ! Iterate through the list and print it
+        ! Iterate through the list and print it all on one line
         do while (associated(current))
             write(*,fmt="(i1)", advance="no") current%num
             current => current%next
@@ -46,7 +45,7 @@ module linked_list
         write(*,*)
     end subroutine printList
 
-    ! Builds/inserts a linked list in a top down style. That is to say that Nodes are always inserted at the back of the list
+    ! Builds/inserts a linked list in a top down style. That is to say that nodes are always inserted at the back of the list
     subroutine insertBack(list, str)
         type (list_pointer), target :: list
         type (list_node), pointer :: node
@@ -65,8 +64,7 @@ module linked_list
         allocate(node)
         node%num = number
 
-        ! Check to see if the list is empty or not. If it is, assign head and tail to the node
-        ! Otherwise, just insert it to the tail of the list
+        ! Check to see if the list is empty or not. If it is, assign head and tail to the node. Otherwise, just insert it to the tail of the list
         if(.not. associated(list%head)) then
             list%head => node
         else
@@ -98,7 +96,32 @@ module linked_list
         list%head => node
     end subroutine insertFront
 
-    ! Handles adding two lists together
+    ! Cleans up all memory associated with a linked list, including the head list item (hence why it is a pointer, not a target here)
+    subroutine freeList(list)
+        type (list_pointer), pointer :: list
+        type (list_node), pointer :: curr
+        type (list_node), pointer :: delete
+
+        curr => list%head
+
+        do while(associated(curr))
+            delete => curr
+            curr => curr%next
+            deallocate(delete)
+        end do
+
+        deallocate(list)
+    end subroutine freeList
+end module linked_list
+
+! This module contains the math subroutines. It makes use of the previously defined linked list
+module math_lib
+    use linked_list
+    implicit none
+
+    contains
+
+    ! Handles adding 2 lists together
     subroutine add(listOne, listTwo, answer)
         type (list_pointer), target :: listOne
         type (list_pointer), target :: listTwo
@@ -196,8 +219,7 @@ module linked_list
         end do
     end subroutine subtract
 
-    ! This is needed because the greater value must be on top when doing subtraction
-    ! 1 is returned for list one being greater (either longer or larger value), otherwise 2 is returned
+    ! Helper function to determine which list is greater for ordering for subtraction
     subroutine compare_lists(listOne, listTwo, greater)
         type (list_pointer), target :: listOne
         type (list_pointer), target :: listTwo
@@ -211,7 +233,7 @@ module linked_list
 
         ! Check length first
         do while (associated(nodeOne) .and. associated(nodeTwo))
-            if(.not. associated(nodeOne%next) .and. (.not. associated(nodeTwo%next))) then ! make sure to check if both are invalid first, becuase then they are the same length and that is okay
+            if(.not. associated(nodeOne%next) .and. (.not. associated(nodeTwo%next))) then ! make sure to check if both are invalid first, because then they are the same length and that is okay
                 exit
             else if(.not. associated(nodeOne%next)) then
                 greater = 2
@@ -292,7 +314,7 @@ module linked_list
                 nodeOne => nodeOne%previous
             end do
 
-            if(overflow > 0) then ! Again, in case the last existing node was > 9, create one last new one to hold remainder
+            if(overflow > 0) then ! In case the last existing node was > 9, create one last new one to hold remainder
                 call insertFront(tempListOne, overflow)
             end if
 
@@ -305,6 +327,8 @@ module linked_list
             nodeTwo => nodeTwo%previous
         end do
     end subroutine multiply
+
+    ! Future plan: Division
 
     ! Handles factorial of a list
     subroutine factorial(listOne, answer)
@@ -319,13 +343,13 @@ module linked_list
         integer :: factorialNum=0 ! Since factorial can only ever be called once, I can get away with this
         integer :: counter=0
         integer :: temp=0
+
         nodeOne => listOne%head
 
-        ! This is the node for 0!. We will assume this is already in for this
+        ! This is the node for 0!. We will assume this is already in
         call insertFront(answer, 1)
 
-        ! Because the assignment specifies that the value for this will be a small number, it will fit in a standard integer
-        ! As such, go through and construct the number
+        ! It is assumed input will fit in a standard integer
         do while (associated(nodeOne))
             factorialNum = factorialNum * 10
             factorialNum = factorialNum + nodeOne%num
@@ -351,38 +375,14 @@ module linked_list
             answer => tempListTwo
             call freeList(tempListOne)            
         end do
-
     end subroutine factorial
-
-    ! Cleans up all memory associated with a linked list, including the head list item (hence why it is a pointer, not a target here)
-    subroutine freeList(list)
-        type (list_pointer), pointer :: list
-        type (list_node), pointer :: curr
-        type (list_node), pointer :: delete
-
-        curr => list%head
-
-        do while(associated(curr))
-            delete => curr
-            curr => curr%next
-            deallocate(delete)
-        end do
-
-        deallocate(list)
-    end subroutine freeList
-end module linked_list
-
-! It also contains the subroutines for add/subtract/multiply and factorial
-module math_lib
-    use linked_list
-    implicit none
-
-    contains
 
 end module math_lib
 
+! Main program. Takes user input and constructs linked lists
 program linkedList
     use linked_list
+    use math_lib
     implicit none
     
     type (list_pointer), pointer :: listOne
@@ -396,17 +396,15 @@ program linkedList
     character (len = 1) :: op
     character (len = n) :: numOne, numTwo
 
-    ! Only allow a valid operation
     do
         write(*,*) "Enter an operation: +, -, * or !"
         read (*,*) op
-        if(op == "+" .or. op == "-" .or. op == "*" .or. op == "!") then
+        if(op == "+" .or. op == "-" .or. op == "*" .or. op == "!") then ! Only allow a valid operation
             exit
         end if
     end do
 
-    ! These would be tough to check for validity, so I won't try
-    ! I will assume user input here is clean 
+    ! TODO: Check user input
     write(*,*) "Enter first operand:"
     read (*,*) numOne
 
@@ -415,7 +413,6 @@ program linkedList
     do i = 1,len(trim(numOne))
         call insertBack(listOne, numOne(i:i))
     end do
-
 
     if (op /= "!") then
         write(*,*) "Enter second operand:" ! Since factorial only uses one, this only occurs for the other 3
@@ -426,18 +423,17 @@ program linkedList
         do i = 1,len(trim(numTwo))
             call insertBack(listTwo, numTwo(i:i))
         end do
+
+        ! Do sign "change" for subtraction
+        if(op == "-" .and. listTwo%isNegative == 1) then
+            listTwo%isNegative = 0    
+        else if(op == "-" .and. listTwo%isNegative == 0) then
+            listTwo%isNegative = 1
+        end if
     end if
 
-    ! Make space for all the lists
     allocate(answer)
     answer%isNegative = 0
-
-    ! Do sign "change" for subtraction
-    if(op == "-" .and. listTwo%isNegative == 1) then
-        listTwo%isNegative = 0    
-    else if(op == "-" .and. listTwo%isNegative == 0) then
-        listTwo%isNegative = 1
-    end if
 
     ! If the user gives two positives or two negatives to add, then just add them as it is easy
     ! If they supply opposite signs for subtraction, again, just add, because it is the same as adding two similar ones
@@ -445,12 +441,15 @@ program linkedList
 
     ! Because of how much was going on in the subroutines in the math_lib implementation, I decided to handle the positive/negative handling here
     ! Not the cleanest implementation, but most of them had slightly different conditions that would have been extra/unnecessary checks for the other operations which may have messed up the signage
-    if((op == "+" .or. op == "-") .and. listOne%isNegative == listTwo%isNegative) then
+    if(op == "!") then ! Factorial - Check first to avoid seg fault due to listTwo
+        call factorial(listOne, answer)
+        answer%isNegative = listOne%isNegative
+    else if((op == "+" .or. op == "-") .and. listOne%isNegative == listTwo%isNegative) then ! Add
         call add(listOne, listTwo, answer)
         if(listOne%isNegative == 1 .and. listTwo%isNegative == 1) then
             answer%isNegative = 1
         end if
-    else if((op == "+" .or. op == "-") .and. listOne%isNegative /= listTwo%isNegative) then 
+    else if((op == "+" .or. op == "-") .and. listOne%isNegative /= listTwo%isNegative) then ! Subtract
         call compare_lists(listOne, listTwo, greater)
         if(greater == 1) then
             call subtract(listOne, listTwo, answer)
@@ -459,14 +458,11 @@ program linkedList
             call subtract(listTwo, listOne, answer)
             answer%isNegative = listTwo%isNegative
         end if
-    else if(op == "*") then ! Multiply
+    else ! Multiply
         call multiply(listOne, listTwo, answer)
         if(listOne%isNegative /= listTwo%isNegative) then
             answer%isNegative = 1
         end if
-    else
-        call factorial(listOne, answer)
-        answer%isNegative = listOne % isNegative
     end if
 
     write(*,*) "Result is:"
