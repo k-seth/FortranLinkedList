@@ -1,6 +1,6 @@
 # Fortran Linked List
 
-An assignment from a Legacy Systems course written in Fortran. The program makes use of linked lists to allow for big number math which exceeds standard integer sizes. With larger input values (especially factorial and exponential) the inefficiency of the code becomes a bottleneck, so things may take a very while. On top of the operations addition, subtraction, multiplication and factorials which were required by the assignment, I have added exponents and am considering others.
+An assignment from a Legacy Systems course written in Fortran. The program makes use of linked lists to allow for big number math which exceeds standard integer sizes. With larger input values (factorial and exponential in particular) the inefficiency of the code becomes a bottleneck, so things may take a very long time. On top of the operations addition, subtraction, multiplication and factorials which were required by the assignment, I have added exponents and am considering others.
 
 Valid operations include:  
 - Add  
