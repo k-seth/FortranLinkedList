@@ -233,18 +233,16 @@ module math_lib
 
         ! Check length first
         do while (associated(nodeOne) .and. associated(nodeTwo))
-            if(.not. associated(nodeOne%next) .and. (.not. associated(nodeTwo%next))) then ! make sure to check if both are invalid first, because then they are the same length and that is okay
-                exit
-            else if(.not. associated(nodeOne%next)) then
+            if(.not. associated(nodeOne%next) .and. associated(nodeTwo%next)) then
                 greater = 2
                 return
-            else if(.not. associated(nodeTwo%next)) then
+            else if(.not. associated(nodeTwo%next) .and. associated(nodeOne%next)) then
                 greater = 1
                 return
-            else
-                nodeOne => nodeOne%next
-                nodeTwo => nodeTwo%next
             end if
+
+            nodeOne => nodeOne%next
+            nodeTwo => nodeTwo%next
         end do  
 
         nodeOne => listOne%head
@@ -257,10 +255,10 @@ module math_lib
             else if(nodeOne%num - nodeTwo%num < 0) then
                 greater = 2
                 return
-            else
-                nodeOne => nodeOne%next
-                nodeTwo => nodeTwo%next
             end if
+
+            nodeOne => nodeOne%next
+            nodeTwo => nodeTwo%next
         end do
         greater = 1 ! In the case they are identical, just say the first one is
     end subroutine compare_lists
@@ -349,7 +347,7 @@ module math_lib
         ! This is the node for 0!. We will assume this is already in
         call insertFront(answer, 1)
 
-        ! It is assumed input will fit in a standard integer
+        ! It is assumed input for a factorial will fit in a standard integer
         do while (associated(nodeOne))
             factorialNum = factorialNum * 10
             factorialNum = factorialNum + nodeOne%num
@@ -377,6 +375,42 @@ module math_lib
         end do
     end subroutine factorial
 
+    subroutine exponent(listOne, listTwo, answer)
+        type (list_pointer), target :: listOne
+        type (list_pointer), target :: listTwo
+        type (list_pointer), pointer :: answer
+
+        type (list_pointer), pointer :: tempListOne
+
+        type (list_node), pointer :: nodeOne
+
+        integer :: power=0
+        integer :: counter=1
+
+        nodeOne => listTwo%head
+        
+        ! This is the node for x^0. We will assume it is already present
+        call insertFront(answer, 1)
+
+        ! For the time being, I will assume the power will fit in a standard integer (make life easy). Convert list to integer
+        do while (associated(nodeOne))
+            power = power * 10
+            power = power + nodeOne%num
+            
+            nodeOne => nodeOne%next
+        end do
+
+        do while (counter <= power)
+            counter = counter + 1
+
+            allocate(tempListOne)
+            call multiply(listOne, answer, tempListOne)
+
+            call freeList(answer)
+            answer => tempListOne
+        end do
+    end subroutine exponent
+
 end module math_lib
 
 ! Main program. Takes user input and constructs linked lists
@@ -397,9 +431,9 @@ program linkedList
     character (len = n) :: numOne, numTwo
 
     do
-        write(*,*) "Enter an operation: +, -, * or !"
+        write(*,*) "Enter an operation: +, -, *, ! or ^"
         read (*,*) op
-        if(op == "+" .or. op == "-" .or. op == "*" .or. op == "!") then ! Only allow a valid operation
+        if(op == "+" .or. op == "-" .or. op == "*" .or. op == "!" .or. op == "^") then ! Only allow a valid operation
             exit
         end if
     end do
@@ -444,6 +478,9 @@ program linkedList
     if(op == "!") then ! Factorial - Check first to avoid seg fault due to listTwo
         call factorial(listOne, answer)
         answer%isNegative = listOne%isNegative
+    else if(op == "^") then
+        call exponent(listOne, listTwo, answer)
+        answer%isNegative = 0
     else if((op == "+" .or. op == "-") .and. listOne%isNegative == listTwo%isNegative) then ! Add
         call add(listOne, listTwo, answer)
         if(listOne%isNegative == 1 .and. listTwo%isNegative == 1) then
